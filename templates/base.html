@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Watter Wise{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700;800&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+{% import "_icons.html" as icons %}
+<div class="ww-page">
+
+    <header class="ww-navbar">
+        <div class="ww-navbar-user">
+            <div class="ww-avatar" aria-label="المستخدم">{{ avatar_initials or 'WW' }}</div>
+        </div>
+
+        <nav class="ww-nav-links" aria-label="التنقل الرئيسي">
+            <a href="{{ url_for('index') }}" class="ww-nav-link">الرئيسية</a>
+            <a href="#usage" class="ww-nav-link">استهلاكي</a>
+            <a href="#plan" class="ww-nav-link">خطتي</a>
+        </nav>
+
+        <a class="ww-brand" href="{{ url_for('index') }}" aria-label="Watter Wise">
+            <span>Watter Wise</span>
+            {{ icons.drop_logo_icon('ww-brand-icon', '#62463B') }}
+        </a>
+    </header>
+
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <div class="ww-flash">
+                {% for message in messages %}
+                    <p>⚠️ {{ message }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+
+    <p class="ww-footer">مشروع Watter-Wise · نسخة تجريبية</p>
+</div>
+</body>
+</html>

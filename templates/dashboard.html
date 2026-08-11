@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+{% block title %}Watter Wise{% endblock %}
+{% block content %}
+{% import "_icons.html" as icons %}
+
+{#
+    استخراج بيانات النوع اللي انحلل فعلياً (إن وجد) من consumption_analysis،
+    وتحديد إذا كان هناك خطأ بالتحليل يستوجب رسالة توضيحية بدل الكرت.
+#}
+{% set analyzed_kind = None %}
+{% set analyzed_data = None %}
+{% set analysis_notice = None %}
+
+{% if consumption_analysis %}
+    {% if consumption_analysis.status == "unsupported_document" %}
+        {% set analysis_notice = consumption_analysis.message %}
+    {% else %}
+        {% set analyzed_kind = "electricity" if consumption_analysis.electricity else "water" %}
+        {% set raw = consumption_analysis.electricity if consumption_analysis.electricity else consumption_analysis.water %}
+        {% if raw.status in ("not_electricity_bill", "not_water_bill", "missing_data") %}
+            {% set analysis_notice = raw.message %}
+            {% set analyzed_kind = None %}
+        {% else %}
+            {% set analyzed_data = raw %}
+        {% endif %}
+    {% endif %}
+{% endif %}
+
+<section class="ww-welcome" id="home">
+    <h1 class="ww-welcome-title">
+        <span class="ww-welcome-emoji" aria-hidden="true">👋</span>
+        <span>أهلًا بك</span>
+    </h1>
+    <p class="ww-welcome-copy">
+        نحن هنا لنساعدك في فهم استهلاك منزلك للطاقة والمياه.
+        ارفع فاتورتك وشوف تحليلك مباشرة بالأسفل.
+    </p>
+</section>
+
+<main class="ww-dashboard">
+
+    <section class="ww-left-column">
+
+        <form action="{{ url_for('analyze') }}" method="post" enctype="multipart/form-data">
+            <section class="ww-upload" dir="rtl">
+                <div class="ww-upload-handle"></div>
+
+                <h2 class="ww-upload-title">
+                    {{ "حلّل فاتورة ثانية" if consumption_analysis else "أضف صورة الفاتورة" }}
+                </h2>
+                <p class="ww-upload-description">
+                    ارفع فاتورة الكهرباء أو المياه لنحلل استهلاكك ونبني لك خطة مخصصة.
+                </p>
+
+                <input
+                    id="bill_image"
+                    name="bill_image"
+                    type="file"
+                    accept="image/png, image/jpeg, image/webp"
+                    required
+                    style="display:none"
+                >
+
+                <div class="ww-upload-dropzone" id="dropzone">
+                    {{ icons.image_upload_icon('ww-upload-icon', '#FFFFFF') }}
+                    <span class="ww-upload-file" id="fileNameLabel">اسحب الملف هنا</span>
+                    <span class="ww-upload-hint">أو اختر ملفًا من جهازك</span>
+                </div>
+
+                <button type="submit" class="ww-upload-button">رفع الفاتورة الآن</button>
+            </section>
+        </form>
+
+        {% if advice and not advice.error %}
+        <article class="ww-estimate">
+            <div class="ww-estimate-handle"></div>
+            <h3 class="ww-estimate-title">التوفير الشهري المتوقع</h3>
+            <div class="ww-estimate-amount tabular-nums">{{ advice.estimated_monthly_savings_sar or 0 }}</div>
+            <div class="ww-estimate-currency">ريال سعودي</div>
+            <p class="ww-estimate-note">{{ advice.analysis_summary }}</p>
+        </article>
+        {% endif %}
+
+        {% if analysis_notice %}
+        <div class="ww-empty-card">
+            <h3>محتاجين صورة أوضح</h3>
+            <p>{{ analysis_notice }}</p>
+        </div>
+        {% endif %}
+
+        {% if error %}
+        <div class="ww-empty-card">
+            <h3>ما قدرنا نحلل الفاتورة 😕</h3>
+            <p>{{ error }}</p>
+        </div>
+        {% endif %}
+
+    </section>
+
+    <section class="ww-right-column">
+
+        <div class="ww-usage-grid" id="usage">
+
+            {# ===== كرت الكهرباء ===== #}
+            {% set elec_analyzed = analyzed_data if analyzed_kind == "electricity" else None %}
+            <article class="ww-usage-card">
+                <div class="ww-card-header">
+                    <span class="ww-stat-label">
+                        {{ icons.bolt_icon('ww-stat-label-icon', '#B08A3E') }}
+                        الكهرباء
+                    </span>
+                    {% if elec_analyzed %}
+                        {% set is_down = elec_analyzed.change_percentage <= 0 %}
+                        <span class="ww-trend-badge {{ 'ww-trend-down' if is_down else 'ww-trend-up' }}">
+                            {% if is_down %}{{ icons.arrow_down_icon() }}{% else %}{{ icons.arrow_up_icon() }}{% endif %}
+                            {{ (elec_analyzed.change_percentage | abs) | round | int }}%
+                        </span>
+                    {% else %}
+                        <span class="ww-trend-badge" style="background:#f1eee4; color:#8a7b72;">بانتظار الفاتورة</span>
+                    {% endif %}
+                </div>
+
+                {% if elec_analyzed %}
+                    <div class="ww-stat-value tabular-nums">{{ elec_analyzed.current }} <span class="ww-stat-unit">ك.و.س</span></div>
+                    {% set max_val = [elec_analyzed.current, elec_analyzed.previous, 1] | max %}
+                    <div class="ww-bars">
+                        <div class="ww-bar-item">
+                            <div class="ww-bar ww-bar-current energy" style="height: {{ [((elec_analyzed.current / max_val) * 100) | round | int, 4] | max }}%;"></div>
+                            <span class="ww-bar-label">الشهر الحالي</span>
+                        </div>
+                        <div class="ww-bar-item">
+                            <div class="ww-bar ww-bar-previous" style="height: {{ [((elec_analyzed.previous / max_val) * 100) | round | int, 4] | max }}%;"></div>
+                            <span class="ww-bar-label">الشهر الماضي</span>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="ww-stat-value tabular-nums">
+                        {{ baseline.electricity_previous if baseline.electricity_previous is not none else '—' }}
+                        <span class="ww-stat-unit">ك.و.س</span>
+                    </div>
+                    <div class="ww-bars">
+                        <div class="ww-bar-item">
+                            <div class="ww-bar" style="height:6%; background:#eee8e2;"></div>
+                            <span class="ww-bar-label">بانتظار الرفع</span>
+                        </div>
+                        <div class="ww-bar-item">
+                            <div class="ww-bar ww-bar-previous" style="height:100%;"></div>
+                            <span class="ww-bar-label">الشهر الماضي</span>
+                        </div>
+                    </div>
+                {% endif %}
+            </article>
+
+            {# ===== كرت المياه ===== #}
+            {% set water_analyzed = analyzed_data if analyzed_kind == "water" else None %}
+            <article class="ww-usage-card">
+                <div class="ww-card-header">
+                    <span class="ww-stat-label">
+                        {{ icons.droplet_icon('ww-stat-label-icon', '#2E86AB') }}
+                        المياه
+                    </span>
+                    {% if water_analyzed %}
+                        {% set is_down = water_analyzed.change_percentage <= 0 %}
+                        <span class="ww-trend-badge {{ 'ww-trend-down' if is_down else 'ww-trend-up' }}">
+                            {% if is_down %}{{ icons.arrow_down_icon() }}{% else %}{{ icons.arrow_up_icon() }}{% endif %}
+                            {{ (water_analyzed.change_percentage | abs) | round | int }}%
+                        </span>
+                    {% else %}
+                        <span class="ww-trend-badge" style="background:#f1eee4; color:#8a7b72;">بانتظار الفاتورة</span>
+                    {% endif %}
+                </div>
+
+                {% if water_analyzed %}
+                    <div class="ww-stat-value tabular-nums">{{ water_analyzed.current }} <span class="ww-stat-unit">لتر</span></div>
+                    {% set max_val = [water_analyzed.current, water_analyzed.previous, 1] | max %}
+                    <div class="ww-bars">
+                        <div class="ww-bar-item">
+                            <div class="ww-bar ww-bar-current" style="height: {{ [((water_analyzed.current / max_val) * 100) | round | int, 4] | max }}%;"></div>
+                            <span class="ww-bar-label">الشهر الحالي</span>
+                        </div>
+                        <div class="ww-bar-item">
+                            <div class="ww-bar ww-bar-previous" style="height: {{ [((water_analyzed.previous / max_val) * 100) | round | int, 4] | max }}%;"></div>
+                            <span class="ww-bar-label">الشهر الماضي</span>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="ww-stat-value tabular-nums">
+                        {{ baseline.water_previous if baseline.water_previous is not none else '—' }}
+                        <span class="ww-stat-unit">لتر</span>
+                    </div>
+                    <div class="ww-bars">
+                        <div class="ww-bar-item">
+                            <div class="ww-bar" style="height:6%; background:#eee8e2;"></div>
+                            <span class="ww-bar-label">بانتظار الرفع</span>
+                        </div>
+                        <div class="ww-bar-item">
+                            <div class="ww-bar ww-bar-previous" style="height:100%;"></div>
+                            <span class="ww-bar-label">الشهر الماضي</span>
+                        </div>
+                    </div>
+                {% endif %}
+            </article>
+
+        </div>
+
+        {% if analyzed_data and (analyzed_data.alert or (advice and advice.anomaly_alert)) %}
+        <div class="ww-alert" role="status">
+            <div class="ww-alert-content">
+                <h3 class="ww-alert-title">تنبيه: استهلاك غير اعتيادي</h3>
+                <p class="ww-alert-message">
+                    {{ (advice.anomaly_alert if advice and advice.anomaly_alert else None) or 'لاحظنا ارتفاعًا في الاستهلاك مقارنة بالشهر الماضي.' }}
+                </p>
+            </div>
+            <div class="ww-alert-icon-wrap" aria-hidden="true">
+                {{ icons.warning_icon('ww-alert-icon', '#E29A46') }}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if advice and not advice.error and advice.personalized_plan %}
+        <section class="ww-plan-section" id="plan">
+            <h3 class="ww-plan-title">خطتك لتحسين استهلاكك</h3>
+            <div class="ww-plan-grid">
+                {% for item in advice.personalized_plan %}
+                {% set diff_class = {'سهل': 'ww-pill-easy', 'متوسط': 'ww-pill-medium', 'يحتاج فني': 'ww-pill-hard'}.get(item.difficulty_level, 'ww-pill-medium') %}
+                <article class="ww-plan-card">
+                    <div class="ww-plan-badges">
+                        <span class="ww-pill ww-pill-saving">{{ item.expected_financial_impact }}</span>
+                        <span class="ww-pill {{ diff_class }}">{{ item.difficulty_level }}</span>
+                    </div>
+                    <h4 class="ww-plan-name">{{ item.category }}</h4>
+                    <p class="ww-plan-description">{{ item.action }}</p>
+                </article>
+                {% endfor %}
+            </div>
+        </section>
+        {% elif advice and advice.error %}
+        <div class="ww-empty-card">
+            <p>تم تحليل الفاتورة بنجاح، لكن تعذّر توليد خطة التوصيات: {{ advice.error }}</p>
+        </div>
+        {% endif %}
+
+    </section>
+
+</main>
+
+<script>
+    const input = document.getElementById('bill_image');
+    const dz = document.getElementById('dropzone');
+    const label = document.getElementById('fileNameLabel');
+
+    dz.addEventListener('click', () => input.click());
+
+    input.addEventListener('change', () => {
+        const file = input.files[0];
+        if (file) label.textContent = file.name;
+    });
+
+    dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('is-dragging'); });
+    dz.addEventListener('dragleave', () => dz.classList.remove('is-dragging'));
+    dz.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dz.classList.remove('is-dragging');
+        if (e.dataTransfer.files.length) {
+            input.files = e.dataTransfer.files;
+            label.textContent = e.dataTransfer.files[0].name;
+        }
+    });
+</script>
+
+{% endblock %}
