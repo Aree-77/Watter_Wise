@@ -29,7 +29,7 @@
 <section class="ww-welcome" id="home">
     <h1 class="ww-welcome-title">
         <span class="ww-welcome-emoji" aria-hidden="true">👋</span>
-        <span>أهلًا بك</span>
+        <span>أهلًا بك جمانة</span>
     </h1>
     <p class="ww-welcome-copy">
         نحن هنا لنساعدك في فهم استهلاك منزلك للطاقة والمياه.
@@ -136,17 +136,10 @@
                 {% else %}
                     <div class="ww-stat-value tabular-nums">
                         {{ baseline.electricity_previous if baseline.electricity_previous is not none else '—' }}
-                        <span class="ww-stat-unit">ك.و.س</span>
+                        <span class="ww-stat-unit">ك.و.س (آخر قراءة)</span>
                     </div>
-                    <div class="ww-bars">
-                        <div class="ww-bar-item">
-                            <div class="ww-bar" style="height:6%; background:#eee8e2;"></div>
-                            <span class="ww-bar-label">بانتظار الرفع</span>
-                        </div>
-                        <div class="ww-bar-item">
-                            <div class="ww-bar ww-bar-previous" style="height:100%;"></div>
-                            <span class="ww-bar-label">الشهر الماضي</span>
-                        </div>
+                    <div style="margin-top: 14px; padding: 10px 8px; text-align: center; font-size: 11px; color: #a99a90; background: #f8f5f0; border-radius: 10px;">
+                        ارفع فاتورة الكهرباء لمقارنتها بهذا الرقم
                     </div>
                 {% endif %}
             </article>
@@ -186,17 +179,10 @@
                 {% else %}
                     <div class="ww-stat-value tabular-nums">
                         {{ baseline.water_previous if baseline.water_previous is not none else '—' }}
-                        <span class="ww-stat-unit">لتر</span>
+                        <span class="ww-stat-unit">لتر (آخر قراءة)</span>
                     </div>
-                    <div class="ww-bars">
-                        <div class="ww-bar-item">
-                            <div class="ww-bar" style="height:6%; background:#eee8e2;"></div>
-                            <span class="ww-bar-label">بانتظار الرفع</span>
-                        </div>
-                        <div class="ww-bar-item">
-                            <div class="ww-bar ww-bar-previous" style="height:100%;"></div>
-                            <span class="ww-bar-label">الشهر الماضي</span>
-                        </div>
+                    <div style="margin-top: 14px; padding: 10px 8px; text-align: center; font-size: 11px; color: #a99a90; background: #f8f5f0; border-radius: 10px;">
+                        ارفع فاتورة المياه لمقارنتها بهذا الرقم
                     </div>
                 {% endif %}
             </article>
